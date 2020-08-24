@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SocketIOチャット</title>
+</head>
+<body>
+
+<h1>SocketIOチャット</h1>
+
+<!-- 発言フォーム -->
+<form id="frm-post">
+  <input type="text" id="msg">
+  <button>送信</button>
+</form>
+<div id="message1" style="position:absolute; left:10px; top:150px">
+    相手の選択は ？
+    </div>
+    <div id="message2" style="position:absolute; left:10px; top:190px">
+    勝敗の結果は ？
+</div>
+<form style="position:absolute; left:10px; top:70px" id="janken-post">
+    あなたの選択は　
+    <select id="mySelect">
+    <option>グー</option>
+    <option>チョキ</option>
+    <option>パー</option>
+    </select>
+    <input type="button" value="決定" onclick="myGame()">
+</form>
+
+<!-- 発言ログ -->
+<ul id="msglist">
+</ul>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  //-------------------------------------
+  // Socket.ioサーバへ接続
+  //-------------------------------------
+  const socket = io();
+  function myGame()
+  {
+    myNumber = document.getElementById("mySelect").selectedIndex;
+    hisNumber = Math.floor(Math.random()*3);
+    if( hisNumber == 0 ){
+    hisHand = "グー";
+    }
+    if( hisNumber == 1 ){
+    hisHand = "チョキ";
+    }
+    if( hisNumber == 2 ){
+    hisHand = "パー";
+    }
+    if( myNumber - hisNumber == -2 ){
+    judge = "あなたの 負け";
+    }
+    if( myNumber - hisNumber == -1 ){
+    judge = "あなたの 勝ち";
+    }
+    if( myNumber - hisNumber == 0 ){
+    judge = "両者の 引き分け";
+    }
+    if( myNumber - hisNumber == 1 ){
+    judge = "あなたの 負け";
+    }
+    if( myNumber - hisNumber == 2 ){
+    judge = "あなたの 勝ち";
+    }
+    document.getElementById("message1").innerHTML = "相手の選択は "+hisHand;
+    //document.getElementById("message2").innerHTML = "勝敗の結果は "+judge;
+
+    // Socket.ioサーバへ送信
+    socket.emit("janken", {judge});
+  }
+
+  /**
+   * [イベント] フォームが送信された
+   */
+  document.querySelector("#frm-post").addEventListener("submit", (e)=>{
+    // 規定の送信処理をキャンセル(画面遷移しないなど)
+    e.preventDefault();
+
+    // 入力内容を取得する
+    const msg = document.querySelector("#msg");
+    if( msg.value === "" ){
+      return(false);
+    }
+
+    // Socket.ioサーバへ送信
+    socket.emit("post", {text: msg.value});
+    socket.emit("janken", {judge});
+
+    // 発言フォームを空にする
+    msg.value = "";
+  });
+
+  /**
+   * [イベント] 誰かが発言した
+   */
+  socket.on("member-post", (msg)=>{
+    const list = document.querySelector("#msglist");
+    const li = document.createElement("li");
+    li.innerHTML = `${msg.text}`;
+    list.insertBefore(li, list.firstChild);
+  });
+
+  socket.on("janken-post", (judge)=>{
+    document.getElementById("message2").innerHTML = "勝敗の結果は "+judge;
+  });
+
+
+  /**
+   * [イベント] ページの読込み完了
+   */
+  window.onload = ()=>{
+    // テキストボックスを選択する
+    document.querySelector("#msg").focus();
+  }
+</script>
+</body>
+</html>
